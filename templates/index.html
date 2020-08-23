@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>My Webpage</title>
+</head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+<body>
+    
+    </ul>
+
+    <h1>My Webpage</h1>
+    <div id = "a">nooo</div>
+    <div id = "b"></div>
+    <div id = "gamma"></div>
+</body>
+<script>
+    // import {
+    //     Gyroscope
+    // }from 
+    // let gyr = null;
+    // try{
+    //     gyr = new Gyroscope();
+    // };
+
+    // setInterval(function(gyr){
+    //     $.post()
+
+    // },3000);
+    // window.alert("please");
+    navigator.permissions.query({ name: 'gyroscope' })
+    .then(result => {
+    if (result.state === 'denied') {
+        $("h1").text('Permission to use gyro sensor is denied.');
+        return;
+    }
+    // Use the sensor.
+
+    let sensor = new Gyroscope({frequency  : 0.1});
+    
+    // window.addEventListener("deviceorientation", handleOrientation, true);
+    // function handleOrientation(event){
+    //     console.log(event.absolute);
+    //     $("#a").text(event.alpha);
+    //     $("#b").text(event.beta);
+    //     $("#gamma").text(event.gamma);
+    // }
+    sensor.onreading = () => {
+        console.log("pls");
+        $("#a").text(sensor.x);
+        $("#b").text(sensor.y);
+        $("#gamma").text(sensor.z);
+    }
+    sensor.start();
+    });
+</script>
+</html>

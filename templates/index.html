@@ -3,54 +3,65 @@
 <head>
     <title>My Webpage</title>
 </head>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
 <body>
     
-    </ul>
-
-    <h1>My Webpage</h1>
-    <div id = "a">nooo</div>
-    <div id = "b"></div>
-    <div id = "gamma"></div>
+    <button type="button" class="btn btn-outline-primary" id = "permitbut">Permit Gyro</button>
+    <h3 id = "a">nooo</h3>
+    <h3 id = "b"></h3>
+    <h3 id = "gamma"></h3>
 </body>
 <script>
-    // import {
-    //     Gyroscope
-    // }from 
-    // let gyr = null;
-    // try{
-    //     gyr = new Gyroscope();
-    // };
-
-    // setInterval(function(gyr){
-    //     $.post()
-
-    // },3000);
-    // window.alert("please");
-    $("h1").text("run");
-    // navigator.permissions.query({ name: 'gyroscope' })
-    // .then(result => {
-    //     $("h1").text(result.state);
-    // if (result.state === 'denied') {
-        
-    //     return;
-    // }
-    // // Use the sensor.
-    
-    try{
-        let sensor = new Gyroscope({frequency  : 1});
-        sensor.start();
-        sensor.addEventListener("reading",function(e){
-            console.log("pls");
-            $("#a").text(e.target.x);
-            $("#b").text(e.target.y);
-            $("#gamma").text(e.target.z);
-        });
-    }catch(error){
-        window.alert(error);
+    if (location.protocol != 'https:') {
+      location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
     }
-    
-    // });
+    window.onload = function () {
+
+    // Check if is IOS 13 when page loads.
+    if ( window.DeviceMotionEvent && typeof window.DeviceMotionEvent.requestPermission === 'function' ){
+
+        // Everything here is just a lazy banner. You can do the banner your way.
+        // const banner = document.createElement('div')
+        // banner.innerHTML = `<div style="z-index: 1; position: absolute; width: 100%; background-color:#000; color: #fff"><p style="padding: 10px">Click here to enable DeviceMotion</p></div>`
+        $("#permitbut").click(ClickRequestDeviceMotionEvent); // You NEED to bind the function into a onClick event. An artificial 'onClick' will NOT work.
+        // document.querySelector('body').appendChild(banner)
+        // document.getElementById("permitbut").onclick = ClickRequestDeviceMotionEvent;
+
+    }
+    }
+
+
+    function ClickRequestDeviceMotionEvent () {
+    window.DeviceMotionEvent.requestPermission()
+    .then(response => {
+        // window.alert(response);
+        if (response === 'granted') {
+          $("#permitbut").addClass("d-none");
+          window.addEventListener('devicemotion',handleMotion, true)
+          window.addEventListener("deviceorientation", handleOrient,true);
+        } else {
+        console.log('DeviceMotion permissions not granted.')
+        }
+    })
+    .catch(e => {
+        console.error(e)
+    })
+    }
+    function handleMotion(){
+      // $("#a").text(event.accelerationIncludingGravity.x);
+      // $("#b").text(event.accelerationIncludingGravity.y);
+      // $("#gamma").text(event.accelerationIncludingGravity.z);
+      
+    }
+    function handleOrient(){
+      $("#a").text(event.alpha);
+      $("#b").text(event.beta);
+      $("#gamma").text(event.gamma);
+      
+    }
+
 </script>
 </html>

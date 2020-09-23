@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>webgldemo</title>
+
+    <style>
+      html, body {
+/*             background-color: #000000; */
+            margin: 0px;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+      canvas {
+        width: 400px;
+        height: 400px;
+      }
+    </style>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.3.0/cjs/index.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.3.0/gl-matrix.js"></script> -->
+    <script src="public/gl-matrix-min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
+      crossorigin="anonymous"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
+      integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"
+      integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <div class = "container mx-auto">
+      <div class="row">
+        <div class = "col permit">
+          <button type="button" class="btn btn-outline-primary" id="permitbut">
+            Permit Gyro
+          </button>
+        </div>
+        <div class = "col">
+          <button type="button" class="btn btn-outline-primary" id="levelbut">
+            set level
+          </button>
+        </div>
+        <div class = "col">
+          <button type="button" class="btn btn-outline-primary" id="headingbut">
+            set heading
+          </button>
+        </div>
+      </div>
+      <div class = "row fill">
+        <div class= "col mx-auto">
+          <canvas></canvas>  
+        </div>
+      </div>
+      <div class = "row">
+        <div class = "col">
+          <div id = "roll" class="alert alert-primary" role="alert">
+            Roll 0 degrees
+          </div>
+        </div>
+        <div class = "col">
+          <div id = "pitch" class="alert alert-primary" role="alert">
+            Pitch 0 degrees
+          </div>
+        </div>
+        <div class = "col">
+          <div id = "heading" class="alert alert-primary" role="alert">
+            Heading 0 degrees
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="info"></div>
+
+    <script id="vs" type="x-shader/vertex">
+      attribute vec3 position;
+      attribute vec3 normals;
+
+      uniform mat4 vp;
+      uniform mat4 m;
+      uniform mat4 normm;
+      varying vec4 colour;
+
+      void main() {
+          //light = vec3(10, 10, -20);
+          //surface = vec4(0.7,0.9,1,1);
+
+          vec4 newpos = m * vec4( position, 1.0 );
+          vec3 norminterp = vec3(normm * vec4(normals, 0));
+          gl_Position = vp * newpos;
+          colour = vec4(0.7, 0.9, 1, 1)*clamp(dot(normalize(norminterp), normalize(vec3(10,10,-10)-position)),0.0,1.0)+vec4(0,0,0,1);
+
+      }
+    </script>
+
+    <script id="fs" type="x-shader/fragment">
+
+      varying vec4 colour;
+      void main( void ) {
+
+          gl_FragColor = colour;
+
+      }
+    </script>
+    <!-- vec4( red, green, blue, 1.0 ); -->
+    <script>
+      var cube = [
+        // 1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0, // v0-v1-v1-v3 front
+        // 0.5, 0.5, 1.0,   0.5,-0.5, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0, // v0-v3-v4-v5 right
+        // 1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0, // v0-v5-v6-v1 up
+        // -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0,-1.0, 1.0, // v1-v6-v7-v1 left
+        // -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   1.0,-1.0, 1.0,  -1.0,-1.0, 1.0, // v7-v4-v3-v1 down
+        // 1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0  // v4-v7-v6-v5 back
+        
+        0.5, 0.5, 1.0,  -0.5, 0.5, 1.0,  -0.5,-0.5, 1.0,   0.5,-0.5, 1.0, // v0-v1-v1-v3 front
+        0.5, 0.5, 1.0,   0.5,-0.5, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0, // v0-v3-v4-v5 right
+        0.5, 0.5, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -0.5, 0.5, 1.0, // v0-v5-v6-v1 up
+        -0.5, 0.5, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -0.5,-0.5, 1.0, // v1-v6-v7-v1 left
+        -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   0.5,-0.5, 1.0,  -0.5,-0.5, 1.0, // v7-v4-v3-v1 down
+        1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0  // v4-v7-v6-v5 back
+      ];
+      var indices = [
+        0, 1, 2,   0, 2, 3,
+        4, 5, 6,   4, 6, 7,
+        8, 9,10,   8,10,11,
+        12,13,14,  12,14,15,
+        16,17,18,  16,18,19,
+        20,21,22,  20,22,23 
+      ];
+      var normals = [
+        0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,  // v0-v1-v2-v3 front perp vecs
+        1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,  // v0-v3-v4-v5 right
+        0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,  // v0-v5-v6-v1 up
+        -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  // v1-v6-v7-v2 left
+        0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,  // v7-v4-v3-v2 down
+        0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0   // v4-v7-v6-v5 back
+      ];
+      /**
+       * Provides requestAnimationFrame in a cross browser way.
+       * paulirish.com/2011/requestanimationframe-for-smart-animating/
+       */
+      window.requestAnimationFrame =
+        window.requestAnimationFrame ||
+        (function() {
+          return (
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.oRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function(callback, element) {
+              window.setTimeout(callback, 1000 / 60);
+            }
+          );
+        })();
+
+      var canvas,
+        gl,
+        buffer,
+        indexbuf,
+        vertex_shader,
+        fragment_shader,
+        currentProgram,
+        vertex_position,
+        normal_position,
+        vplocation,
+        mlocation,
+        normmlocation,
+        perspective,
+        view,
+        model,
+        vp,
+        parameters = {
+          start_time: new Date().getTime(),
+          time: 0,
+          screenWidth: 0,
+          screenHeight: 0,
+          alpha: 0,
+          beta: 0,
+          gamma: 0,
+          aoff: 0,
+          boff: 0,
+          goff: 0,
+          hset: 0,
+          rolloff: 0,
+          pitchoff: 0,
+          headingoff: 0,
+          pitch:0,
+          roll:0,
+        };
+
+      init();
+      animate();
+
+      function init() {
+        vertex_shader = document.getElementById("vs").textContent;
+        fragment_shader = document.getElementById("fs").textContent;
+
+        canvas = document.querySelector("canvas");
+
+        // Initialise WebGL
+
+        try {
+          gl = canvas.getContext("experimental-webgl");
+        } catch (error) {}
+
+        if (!gl) {
+          throw "cannot create webgl context";
+        }
+
+        gl.enable(gl.DEPTH_TEST);
+
+        currentProgram = createProgram(vertex_shader, fragment_shader);
+        // console.log(currentProgram);
+        buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube), gl.STATIC_DRAW);
+        vertex_position = gl.getAttribLocation(currentProgram, "position");
+        gl.vertexAttribPointer(vertex_position, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(vertex_position);
+
+        normalbuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalbuffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(normals),
+          gl.STATIC_DRAW
+        );
+        normal_position = gl.getAttribLocation(currentProgram, "normals");
+        gl.vertexAttribPointer(normal_position, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(normal_position);
+
+        indexbuf = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexbuf);
+        gl.bufferData(
+          gl.ELEMENT_ARRAY_BUFFER,
+          new Uint16Array(indices),
+          gl.STATIC_DRAW
+        );
+
+        // Create Program
+
+        // currentProgram = createProgram( vertex_shader, fragment_shader );
+        vplocation = gl.getUniformLocation(currentProgram, "vp");
+        mlocation = gl.getUniformLocation(currentProgram, "m");
+        normmlocation = gl.getUniformLocation(currentProgram, "normm");
+        // timeLocation = gl.getUniformLocation( currentProgram, 'time' );
+        // resolutionLocation = gl.getUniformLocation( currentProgram, 'resolution' );
+      }
+
+      function createProgram(vertex, fragment) {
+        var program = gl.createProgram();
+
+        var vs = createShader(vertex, gl.VERTEX_SHADER);
+        var fs = createShader(
+          "#ifdef GL_ES\nprecision highp float;\n#endif\n\n" + fragment,
+          gl.FRAGMENT_SHADER
+        );
+
+        if (vs == null || fs == null) return null;
+
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+
+        gl.deleteShader(vs);
+        gl.deleteShader(fs);
+
+        gl.linkProgram(program);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          alert(
+            "ERROR:\n" +
+              "VALIDATE_STATUS: " +
+              gl.getProgramParameter(program, gl.VALIDATE_STATUS) +
+              "\n" +
+              "ERROR: " +
+              gl.getError() +
+              "\n\n" +
+              "- Vertex Shader -\n" +
+              vertex +
+              "\n\n" +
+              "- Fragment Shader -\n" +
+              fragment
+          );
+
+          return null;
+        }
+
+        return program;
+      }
+
+      function createShader(src, type) {
+        var shader = gl.createShader(type);
+
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          alert(
+            (type == gl.VERTEX_SHADER ? "VERTEX" : "FRAGMENT") +
+              " SHADER:\n" +
+              gl.getShaderInfoLog(shader)
+          );
+          return null;
+        }
+
+        return shader;
+      }
+
+      function resizeCanvas(event) {
+        if (
+          canvas.width != canvas.clientWidth ||
+          canvas.height != canvas.clientHeight
+        ) {
+          canvas.width = canvas.clientWidth;
+          canvas.height = canvas.clientHeight;
+
+          parameters.screenWidth = canvas.width;
+          parameters.screenHeight = canvas.height;
+
+          gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      function animate() {
+        resizeCanvas();
+        render();
+        requestAnimationFrame(animate);
+      }
+
+      function render() {
+        if (!currentProgram) return;
+
+        parameters.time = new Date().getTime() - parameters.start_time;
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        // Load program into GPU
+
+        gl.useProgram(currentProgram);
+
+        //fov radians 0.252680255142
+        //deg to radians 0.0174532925199
+        perspective = glMatrix.mat4.create();
+        view = glMatrix.mat4.create();
+        vp = glMatrix.mat4.create();
+        model = glMatrix.mat4.create();
+        normm = glMatrix.mat4.create();
+        ident = glMatrix.mat4.create();
+        rota = glMatrix.mat4.create();
+        rotb = glMatrix.mat4.create();
+        rotg = glMatrix.mat4.create();
+        glMatrix.mat4.perspective(
+          perspective,
+          0.252680255142,
+          parameters.screenWidth / parameters.screenHeight,
+          1,
+          500
+        );
+        glMatrix.mat4.targetTo(view, [0, 0, -20], [0, 0, 0], [0, 1, 0]);
+
+        //             glMatrix.mat4.rotateZ(view, view, parameters.alpha*0.0174532925199);
+
+        //             glMatrix.mat4.rotateX(view, view, parameters.beta*0.0174532925199);
+
+        //             glMatrix.mat4.rotateY(view, view, -parameters.gamma*0.0174532925199);
+        
+        glMatrix.mat4.rotateX(model, model, -90*0.01745);
+        if(parameters.hset){
+          updateheadingoff();
+        }
+        //there is some isometric cube pog shit that could be done here
+        glMatrix.mat4.rotateZ(rota, ident,  parameters.headingoff* 0.0174532925199);
+        
+        // glMatrix.mat4.rotateZ(rota, rota, (parameters.alpha )* 0.0174532925199);//indent instead of second rota
+        
+        glMatrix.mat4.rotateX(rotb, ident, (parameters.beta) * 0.0174532925199);
+
+        glMatrix.mat4.rotateY(rotg, ident, -(parameters.gamma ) * 0.0174532925199);
+        
+        glMatrix.mat4.multiply(rotb, rotb, rota);
+        
+        glMatrix.mat4.multiply(rotg, rotg, rotb);
+        
+        glMatrix.mat4.multiply(view, view, rotg);
+        
+        glMatrix.mat4.multiply(vp, perspective, view);
+        glMatrix.mat4.invert(normm, model);
+        glMatrix.mat4.transpose(normm, normm);
+
+        // glMatrix.mat4.multiply(vp, vp, model);
+        // Set values to program variables
+        gl.uniformMatrix4fv(vplocation, false, vp);
+        gl.uniformMatrix4fv(mlocation, false, model);
+        gl.uniformMatrix4fv(normmlocation, false, normm);
+
+        // gl.uniformMatrix4fv( m)
+        // gl.uniform1f( timeLocation, parameters.time / 1000 );
+        // gl.uniform2f( resolutionLocation, parameters.screenWidth, parameters.screenHeight );
+
+        // Render geometry
+
+        // gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
+
+        // gl.bindBuffer( gl.ARRAY_BUFFER, normalbuffer)
+        // gl.vertexAttribPointer( normal_position, 3, gl.FLOAT, false, 0, 0 );
+        // gl.enableVertexAttribArray( normal_position );
+        // gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, indexbuf);
+
+        gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+      }
+      if (location.protocol != "https:") {
+        location.href =
+          "https:" +
+          window.location.href.substring(window.location.protocol.length);
+      }
+      
+      
+      window.onload = function() {
+        // Check if is IOS 13 when page loads.
+        if (
+          window.DeviceMotionEvent &&
+          typeof window.DeviceMotionEvent.requestPermission === "function"
+        ) {
+          // Everything here is just a lazy banner. You can do the banner your way.
+          // const banner = document.createElement('div')
+          // banner.innerHTML = `<div style="z-index: 1; position: absolute; width: 100%; background-color:#000; color: #fff"><p style="padding: 10px">Click here to enable DeviceMotion</p></div>`
+          $("#permitbut").click(ClickRequestDeviceMotionEvent); // You NEED to bind the function into a onClick event. An artificial 'onClick' will NOT work.
+          $("#levelbut").click(leveloffsets);
+          $("#headingbut").click(headingoffsets);
+          // document.querySelector('body').appendChild(banner)
+          // document.getElementById("permitbut").onclick = ClickRequestDeviceMotionEvent;
+        } else {
+          listeners();
+        }
+      };
+      function leveloffsets(){
+        parameters.aoff = -parameters.alpha;
+        parameters.boff = -parameters.beta;
+        parameters.goff = -parameters.gamma;
+        parameters.rolloff = -parameters.roll;
+        parameters.pitchoff = -parameters.pitch;
+        return 0;
+      }
+      function headingoffsets(){
+        parameters.hset = 1-parameters.hset;
+      }
+      function updateheadingoff(){
+        parameters.headingoff++;
+        // parameters.headingoff = -parameters.alpha;
+      }
+      function ClickRequestDeviceMotionEvent() {
+        window.DeviceMotionEvent.requestPermission()
+          .then(response => {
+            // window.alert(response);
+            if (response === "granted") {
+              listeners();
+            } else {
+              console.log("DeviceMotion permissions not granted.");
+            }
+          })
+          .catch(e => {
+            console.error(e);
+          });
+      }
+      function listeners(){
+        $(".permit").addClass("d-none");
+        window.addEventListener("devicemotion", handleMotion, true);
+        window.addEventListener("deviceorientation", handleOrient, true);
+      }
+      function handleMotion() {
+        // $("#a").text(event.accelerationIncludingGravity.x);
+        // $("#b").text(event.accelerationIncludingGravity.y);
+        // $("#gamma").text(event.accelerationIncludingGravity.z);
+      }
+      
+      function handleOrient() {
+        // let alpha = event.alpha* 0.0174532925199;
+        // let beta = event.beta* 0.0174532925199;
+        // let gamma = event.gamma* 0.0174532925199;
+        parameters.alpha = event.alpha;
+        parameters.beta = event.beta;
+        parameters.gamma = event.gamma;
+        ident = glMatrix.mat4.create();
+        rota = glMatrix.mat4.create();
+        rotb = glMatrix.mat4.create();
+        rotg = glMatrix.mat4.create();
+        
+        
+        
+        glMatrix.mat4.rotateZ(rota, ident, (parameters.alpha-parameters.headingoff)* 0.0174532925199);//parameters.alpha
+        glMatrix.mat4.rotateX(rotb, ident, (parameters.beta) * 0.0174532925199);
+        glMatrix.mat4.rotateY(rotg, ident, (parameters.gamma) * 0.0174532925199);
+        
+        
+        glMatrix.mat4.multiply(rotb, rotb, rota);
+        glMatrix.mat4.multiply(rotg, rotg, rotb);//rotation was in wrong order, want to go from global to intrinsic not opposite
+        
+        glMatrix.mat4.rotateZ(rota, ident, (parameters.headingoff-parameters.alpha)* 0.0174532925199);
+        glMatrix.mat4.multiply(rotg, rota, rotg);
+        
+        // let roll = glMatrix.vec3.fromValues(-1,0,0);
+        // let pitch = glMatrix.vec3.fromValues(0,1,0);
+        // let yaw = glMatrix.vec3.fromValues(0,0,1);
+        let rollt = glMatrix.vec3.fromValues(1,0,0);
+        let pitcht = glMatrix.vec3.fromValues(0,1,0);
+        let yawt = glMatrix.vec3.fromValues(0,0,1);
+        glMatrix.vec3.transformMat4(rollt, rollt, rotg);
+        glMatrix.vec3.transformMat4(pitcht, pitcht, rotg);
+        glMatrix.vec3.transformMat4(yawt, yawt, rotg);
+        parameters.roll = Math.atan(rollt[2]/rollt[0])/0.0174532925199;
+        parameters.pitch = Math.atan(pitcht[2]/pitcht[1])/0.0174532925199;
+        // $("#heading").text(Math.atan((pitcht[0])/(pitcht[1]))*180/Math.PI);
+        $("#heading").text(((parameters.alpha+parameters.headingoff)%360).toFixed(3));//I think that this is just correct, use to rotate a horizontal vector, rotate and measure angle
+        // $("#pitch").text(pitcht[0].toFixed(2)+" "+pitcht[1].toFixed(2)+" "+pitcht[2].toFixed(2)+" ");//(parameters.beta+parameters.boff).toFixed(5));
+        // $("#roll").text(rollt[0].toFixed(2)+" "+rollt[1].toFixed(2)+" "+rollt[2].toFixed(2)+" ");//(parameters.gamma+parameters.goff).toFixed(5));//(Math.cos(alpha)*gamma+Math.sin(alpha)*beta)*180/Math.PI);//);
+        $("#pitch").text((parameters.pitch+parameters.pitchoff).toFixed(3));//(90-Math.abs(.toFixed(3));
+        $("#roll").text((parameters.roll+parameters.rolloff).toFixed(3));//((90-Math.abs()*).toFixed(3));
+      }
+    </script>
+  </body>
+</html>

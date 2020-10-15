@@ -1,3 +1,5 @@
+/* global math */
+/* global L */
 if (location.protocol != "https:") {
     location.href =
         "https:" +
